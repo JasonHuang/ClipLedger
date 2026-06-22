@@ -74,6 +74,29 @@ final class ClipboardViewModelTests: XCTestCase {
         XCTAssertEqual(pasteboard.string(forType: .string), "Reusable")
     }
 
+    func testTenThousandHistoryOperationsMaintainLimitAndOrdering() throws {
+        let measureOptions = XCTMeasureOptions()
+        measureOptions.iterationCount = 1
+
+        measure(metrics: [XCTClockMetric()], options: measureOptions) {
+            do {
+                let viewModel = try makeViewModel(maximumHistoryCount: 200)
+
+                for index in 0..<10_000 {
+                    viewModel.recordClipboardContent("Bulk Item \(index)")
+                }
+
+                XCTAssertNil(viewModel.errorMessage)
+                XCTAssertTrue(viewModel.pinnedItems.isEmpty)
+                XCTAssertEqual(viewModel.historyItems.count, 200)
+                XCTAssertEqual(viewModel.historyItems.first?.content, "Bulk Item 9999")
+                XCTAssertEqual(viewModel.historyItems.last?.content, "Bulk Item 9800")
+            } catch {
+                XCTFail("Failed to build performance test model: \(error)")
+            }
+        }
+    }
+
     private func makeViewModel(
         maximumHistoryCount: Int = 100,
         pasteboard: NSPasteboard = .withUniqueName()

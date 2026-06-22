@@ -16,6 +16,7 @@ final class ClipboardViewModel: ObservableObject {
     private let settings: AppSettings
     private let pasteboard: NSPasteboard
     private let maximumContentLength = 10_000
+    private var latestRecordedContent: String?
 
     init(modelContext: ModelContext, settings: AppSettings, pasteboard: NSPasteboard = .general) {
         self.modelContext = modelContext
@@ -44,6 +45,7 @@ final class ClipboardViewModel: ObservableObject {
 
             pinnedItems = try modelContext.fetch(pinnedDescriptor)
             historyItems = try modelContext.fetch(historyDescriptor)
+            updateLatestRecordedContent()
             updateSelectionAfterReload()
             errorMessage = nil
         } catch {
@@ -54,14 +56,20 @@ final class ClipboardViewModel: ObservableObject {
     func recordClipboardContent(_ content: String) {
         guard isValidClipboardContent(content) else { return }
 
-        if settings.removeConsecutiveDuplicates, latestItem()?.content == content {
+        if settings.removeConsecutiveDuplicates, latestRecordedContent == content {
             return
         }
 
-        modelContext.insert(ClipboardItem(content: content))
-        saveChanges()
-        enforceHistoryLimit()
-        reload()
+        let item = ClipboardItem(content: content)
+        modelContext.insert(item)
+        historyItems.insert(item, at: 0)
+        latestRecordedContent = content
+        trimLoadedHistoryItemsToLimit()
+        updateSelectionAfterReload()
+
+        if !saveChanges() {
+            reload()
+        }
     }
 
     func restore(_ item: ClipboardItem) {
@@ -170,17 +178,21 @@ final class ClipboardViewModel: ObservableObject {
         return !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private func latestItem() -> ClipboardItem? {
-        do {
-            var descriptor = FetchDescriptor<ClipboardItem>(
-                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-            )
-            descriptor.fetchLimit = 1
-            return try modelContext.fetch(descriptor).first
-        } catch {
-            errorMessage = error.localizedDescription
-            return nil
+    private func updateLatestRecordedContent() {
+        latestRecordedContent = [pinnedItems.first, historyItems.first]
+            .compactMap { $0 }
+            .max { $0.createdAt < $1.createdAt }?
+            .content
+    }
+
+    private func trimLoadedHistoryItemsToLimit() {
+        let overflowCount = historyItems.count - settings.maximumHistoryCount
+        guard overflowCount > 0 else { return }
+
+        for item in historyItems.suffix(overflowCount) {
+            modelContext.delete(item)
         }
+        historyItems.removeLast(overflowCount)
     }
 
     private func enforceHistoryLimit() {
@@ -204,12 +216,15 @@ final class ClipboardViewModel: ObservableObject {
         }
     }
 
-    private func saveChanges() {
+    @discardableResult
+    private func saveChanges() -> Bool {
         do {
             try modelContext.save()
             errorMessage = nil
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 }
