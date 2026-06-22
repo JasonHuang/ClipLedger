@@ -98,6 +98,49 @@ final class ClipboardViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredHistoryItems.map(\.content), ["Meeting Beta"])
     }
 
+    func testPinnedItemsCanBeTaggedGroupedAndSearchedByTag() throws {
+        let viewModel = try makeViewModel()
+
+        viewModel.recordClipboardContent("Work URL")
+        let work = try XCTUnwrap(viewModel.historyItems.first)
+        viewModel.pin(work)
+        viewModel.setTag(" Work ", for: try XCTUnwrap(viewModel.pinnedItems.first { $0.content == "Work URL" }))
+
+        viewModel.recordClipboardContent("Code Snippet")
+        let code = try XCTUnwrap(viewModel.historyItems.first)
+        viewModel.pin(code)
+        viewModel.setTag("Code", for: try XCTUnwrap(viewModel.pinnedItems.first { $0.content == "Code Snippet" }))
+
+        viewModel.recordClipboardContent("Plain Snippet")
+        let plain = try XCTUnwrap(viewModel.historyItems.first)
+        viewModel.pin(plain)
+
+        XCTAssertEqual(viewModel.availablePinnedTags, ["Code", "Work"])
+        XCTAssertEqual(viewModel.filteredPinnedTagGroups.map(\.title), ["Code", "Work", "No Tag"])
+
+        viewModel.searchQuery = "work"
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Work URL"])
+        XCTAssertEqual(viewModel.filteredPinnedTagGroups.map(\.title), ["Work"])
+    }
+
+    func testUnpinClearsPinnedTag() throws {
+        let viewModel = try makeViewModel()
+
+        viewModel.recordClipboardContent("Tagged")
+        let item = try XCTUnwrap(viewModel.historyItems.first)
+        viewModel.pin(item)
+
+        let pinned = try XCTUnwrap(viewModel.pinnedItems.first)
+        viewModel.setTag("Saved", for: pinned)
+        viewModel.unpin(try XCTUnwrap(viewModel.pinnedItems.first))
+
+        let historyItem = try XCTUnwrap(viewModel.historyItems.first)
+        XCTAssertEqual(historyItem.content, "Tagged")
+        XCTAssertNil(historyItem.normalizedTagName)
+        XCTAssertTrue(viewModel.availablePinnedTags.isEmpty)
+    }
+
     func testRestoreSelectedItemUsesFilteredSearchResults() throws {
         let pasteboard = NSPasteboard.withUniqueName()
         let viewModel = try makeViewModel(pasteboard: pasteboard)

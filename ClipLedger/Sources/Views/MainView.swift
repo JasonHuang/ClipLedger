@@ -10,6 +10,8 @@ struct MainView: View {
     @State private var isShowingClearConfirmation = false
     @State private var recentlyRestoredItemID: UUID?
     @State private var isSearchPresented = false
+    @State private var tagEditorItem: ClipboardItem?
+    @State private var tagDraft = ""
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -26,13 +28,7 @@ struct MainView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     if !viewModel.filteredPinnedItems.isEmpty {
-                        itemSection(
-                            title: "Pinned",
-                            systemImage: "pin.fill",
-                            items: viewModel.filteredPinnedItems,
-                            isPinnedSection: true,
-                            emptyMessage: nil
-                        )
+                        pinnedSection(groups: viewModel.filteredPinnedTagGroups)
                     }
 
                     if !viewModel.isSearching || !viewModel.filteredHistoryItems.isEmpty {
@@ -67,6 +63,24 @@ struct MainView: View {
         }
         .frame(width: 468, height: 640)
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(item: $tagEditorItem) { item in
+            TagEditorSheet(
+                item: item,
+                tagDraft: $tagDraft,
+                existingTags: viewModel.availablePinnedTags,
+                onCancel: {
+                    tagEditorItem = nil
+                },
+                onClear: {
+                    viewModel.setTag("", for: item)
+                    tagEditorItem = nil
+                },
+                onSave: {
+                    viewModel.setTag(tagDraft, for: item)
+                    tagEditorItem = nil
+                }
+            )
+        }
         .onAppear {
             viewModel.reload()
             if isSearchPresented {
@@ -230,25 +244,12 @@ struct MainView: View {
         emptyMessage: String?
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isPinnedSection ? Color.accentColor : .secondary)
-
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-
-                Spacer()
-
-                Text("\(items.count)")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 20)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color(nsColor: .controlBackgroundColor))
-                    .clipShape(Capsule())
-            }
+            sectionHeader(
+                title: title,
+                systemImage: systemImage,
+                count: items.count,
+                isPinnedSection: isPinnedSection
+            )
 
             if items.isEmpty {
                 if let emptyMessage {
@@ -260,30 +261,105 @@ struct MainView: View {
                 }
             } else {
                 ForEach(items) { item in
-                    HistoryRowView(
-                        item: item,
-                        isSelected: item.id == viewModel.selectedItemID,
-                        isPinnedSection: isPinnedSection,
-                        isRecentlyRestored: item.id == recentlyRestoredItemID,
-                        onRestore: {
-                            restore(item)
-                        },
-                        onPinToggle: {
-                            if item.isPinned {
-                                viewModel.unpin(item)
-                            } else {
-                                viewModel.pin(item)
-                            }
-                        },
-                        onDelete: {
-                            viewModel.delete(item)
-                        }
-                    )
-                    .onTapGesture {
-                        restore(item)
+                    itemRow(item, isPinnedSection: isPinnedSection)
+                }
+            }
+        }
+    }
+
+    private func pinnedSection(groups: [PinnedTagGroup]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(
+                title: "Pinned",
+                systemImage: "pin.fill",
+                count: viewModel.filteredPinnedItems.count,
+                isPinnedSection: true
+            )
+
+            ForEach(groups) { group in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 7) {
+                        Image(systemName: group.tagName == nil ? "tag.slash" : "tag")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+
+                        Text(group.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text("\(group.items.count)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 18)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(nsColor: .controlBackgroundColor).opacity(0.75))
+                            .clipShape(Capsule())
+                    }
+                    .padding(.top, group.id == groups.first?.id ? 0 : 4)
+
+                    ForEach(group.items) { item in
+                        itemRow(item, isPinnedSection: true)
                     }
                 }
             }
+        }
+    }
+
+    private func sectionHeader(
+        title: String,
+        systemImage: String,
+        count: Int,
+        isPinnedSection: Bool
+    ) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(isPinnedSection ? Color.accentColor : .secondary)
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+
+            Spacer()
+
+            Text("\(count)")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 20)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(Capsule())
+        }
+    }
+
+    private func itemRow(_ item: ClipboardItem, isPinnedSection: Bool) -> some View {
+        HistoryRowView(
+            item: item,
+            isSelected: item.id == viewModel.selectedItemID,
+            isPinnedSection: isPinnedSection,
+            isRecentlyRestored: item.id == recentlyRestoredItemID,
+            onRestore: {
+                restore(item)
+            },
+            onPinToggle: {
+                if item.isPinned {
+                    viewModel.unpin(item)
+                } else {
+                    viewModel.pin(item)
+                }
+            },
+            onDelete: {
+                viewModel.delete(item)
+            },
+            onEditTag: isPinnedSection ? {
+                editTag(item)
+            } : nil
+        )
+        .onTapGesture {
+            restore(item)
         }
     }
 
@@ -300,6 +376,11 @@ struct MainView: View {
                 isSearchFocused = true
             }
         }
+    }
+
+    private func editTag(_ item: ClipboardItem) {
+        tagDraft = item.normalizedTagName ?? ""
+        tagEditorItem = item
     }
 
     private func restore(_ item: ClipboardItem) {
@@ -337,6 +418,84 @@ private struct SearchEmptyStateView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 48)
+    }
+}
+
+private struct TagEditorSheet: View {
+    let item: ClipboardItem
+    @Binding var tagDraft: String
+    let existingTags: [String]
+    let onCancel: () -> Void
+    let onClear: () -> Void
+    let onSave: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                Image(systemName: "tag")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
+                    .frame(width: 34, height: 34)
+                    .background(Color.accentColor.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pinned Tag")
+                        .font(.headline)
+                    Text(item.content)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text("Tag")
+                    .font(.callout.weight(.medium))
+
+                TextField("Examples: Work, Email, Code", text: $tagDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(onSave)
+            }
+
+            if !existingTags.isEmpty {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Existing Tags")
+                        .font(.callout.weight(.medium))
+
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
+                            ForEach(existingTags, id: \.self) { tag in
+                                Button {
+                                    tagDraft = tag
+                                } label: {
+                                    Label(tag, systemImage: "tag")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                        .padding(.vertical, 1)
+                    }
+                    .scrollIndicators(.hidden)
+                }
+            }
+
+            HStack {
+                Button("Cancel", action: onCancel)
+
+                Spacer()
+
+                Button("Clear Tag", role: .destructive, action: onClear)
+                    .disabled(item.normalizedTagName == nil)
+
+                Button("Save", action: onSave)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(18)
+        .frame(width: 420)
     }
 }
 

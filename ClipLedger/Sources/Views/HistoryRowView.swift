@@ -8,6 +8,7 @@ struct HistoryRowView: View {
     let onRestore: () -> Void
     let onPinToggle: () -> Void
     let onDelete: () -> Void
+    var onEditTag: (() -> Void)?
 
     @State private var isHovered = false
 
@@ -27,6 +28,9 @@ struct HistoryRowView: View {
 
                 HStack(spacing: 8) {
                     if isPinnedSection {
+                        if let tagName = item.normalizedTagName {
+                            MetadataPill(systemImage: "tag", text: tagName)
+                        }
                         MetadataPill(systemImage: "arrow.uturn.backward", text: "\(item.usageCount) uses")
                         MetadataPill(systemImage: "character.cursor.ibeam", text: "\(item.characterCount) chars")
                     } else {
@@ -49,6 +53,14 @@ struct HistoryRowView: View {
                     help: item.isPinned ? "Unpin" : "Pin",
                     action: onPinToggle
                 )
+
+                if let onEditTag {
+                    RowIconButton(
+                        systemImage: "tag",
+                        help: item.normalizedTagName == nil ? "Set Tag" : "Edit Tag",
+                        action: onEditTag
+                    )
+                }
 
                 RowIconButton(
                     systemImage: "trash",

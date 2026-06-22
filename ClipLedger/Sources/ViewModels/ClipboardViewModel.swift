@@ -2,6 +2,19 @@ import AppKit
 import Foundation
 import SwiftData
 
+struct PinnedTagGroup: Identifiable {
+    let tagName: String?
+    let items: [ClipboardItem]
+
+    var id: String {
+        tagName ?? "__clipledger_untagged__"
+    }
+
+    var title: String {
+        tagName ?? "No Tag"
+    }
+}
+
 @MainActor
 final class ClipboardViewModel: ObservableObject {
     @Published private(set) var pinnedItems: [ClipboardItem] = []
@@ -37,6 +50,10 @@ final class ClipboardViewModel: ObservableObject {
         filteredItems(from: pinnedItems)
     }
 
+    var filteredPinnedTagGroups: [PinnedTagGroup] {
+        pinnedTagGroups(from: filteredPinnedItems)
+    }
+
     var filteredHistoryItems: [ClipboardItem] {
         filteredItems(from: historyItems)
     }
@@ -47,6 +64,11 @@ final class ClipboardViewModel: ObservableObject {
 
     var isSearching: Bool {
         !normalizedSearchQuery.isEmpty
+    }
+
+    var availablePinnedTags: [String] {
+        Array(Set(pinnedItems.compactMap(\.normalizedTagName)))
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
     func reload() {
@@ -121,8 +143,16 @@ final class ClipboardViewModel: ObservableObject {
 
     func unpin(_ item: ClipboardItem) {
         item.isPinned = false
+        item.tagName = nil
         saveChanges()
         enforceHistoryLimit()
+        reload()
+    }
+
+    func setTag(_ tagName: String, for item: ClipboardItem) {
+        let normalizedTagName = Self.normalizedTagName(tagName)
+        item.tagName = normalizedTagName
+        saveChanges()
         reload()
     }
 
@@ -208,8 +238,34 @@ final class ClipboardViewModel: ObservableObject {
         guard !query.isEmpty else { return items }
 
         return items.filter { item in
-            item.content.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+            item.content.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil ||
+                (item.normalizedTagName?.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil)
         }
+    }
+
+    private func pinnedTagGroups(from items: [ClipboardItem]) -> [PinnedTagGroup] {
+        let groupedItems = Dictionary(grouping: items) { item in
+            item.normalizedTagName
+        }
+        let taggedGroups = groupedItems
+            .compactMap { tagName, items -> PinnedTagGroup? in
+                guard let tagName else { return nil }
+                return PinnedTagGroup(tagName: tagName, items: items)
+            }
+            .sorted { lhs, rhs in
+                lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+            }
+
+        if let untaggedItems = groupedItems[nil], !untaggedItems.isEmpty {
+            return taggedGroups + [PinnedTagGroup(tagName: nil, items: untaggedItems)]
+        }
+
+        return taggedGroups
+    }
+
+    private static func normalizedTagName(_ tagName: String) -> String? {
+        let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func updateLatestRecordedContent() {
