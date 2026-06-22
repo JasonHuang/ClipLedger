@@ -67,7 +67,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
 
     private func configurePopover(settings: AppSettings, onOpenSettings: @escaping () -> Void) {
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 440, height: 620)
+        popover.contentSize = NSSize(width: 468, height: 640)
         popover.delegate = self
         popover.contentViewController = NSHostingController(
             rootView: MainView(

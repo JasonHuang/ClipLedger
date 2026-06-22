@@ -1,5 +1,48 @@
+# macOS
 .DS_Store
-DerivedData/
-*.xcresult
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode user state
 xcuserdata/
 *.xcuserstate
+*.xccheckout
+
+# Xcode build and test output
+DerivedData/
+build/
+Build/
+*.xcresult
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# CocoaPods / Carthage / fastlane local output
+Pods/
+Carthage/Build/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+# Logs and local environment
+*.log
+*.tmp
+*.swp
+*.swo
+.env
+.env.*
+
+# App Store / signing local files
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p12
