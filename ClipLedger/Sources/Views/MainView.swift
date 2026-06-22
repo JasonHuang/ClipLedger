@@ -27,8 +27,8 @@ struct MainView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
-                    if !viewModel.filteredPinnedItems.isEmpty {
-                        pinnedSection(groups: viewModel.filteredPinnedTagGroups)
+                    if shouldShowPinnedSection {
+                        pinnedSection(items: viewModel.filteredPinnedItems)
                     }
 
                     if !viewModel.isSearching || !viewModel.filteredHistoryItems.isEmpty {
@@ -43,7 +43,7 @@ struct MainView: View {
 
                     if viewModel.allDisplayItems.isEmpty {
                         EmptyStateView()
-                    } else if viewModel.filteredDisplayItems.isEmpty {
+                    } else if viewModel.filteredDisplayItems.isEmpty && !shouldShowPinnedSection {
                         SearchEmptyStateView(query: viewModel.searchQuery)
                     }
                 }
@@ -267,7 +267,14 @@ struct MainView: View {
         }
     }
 
-    private func pinnedSection(groups: [PinnedTagGroup]) -> some View {
+    private var shouldShowPinnedSection: Bool {
+        guard !viewModel.pinnedItems.isEmpty else { return false }
+        return !viewModel.isSearching ||
+            !viewModel.filteredPinnedItems.isEmpty ||
+            viewModel.selectedPinnedTagName != nil
+    }
+
+    private func pinnedSection(items: [ClipboardItem]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeader(
                 title: "Pinned",
@@ -276,36 +283,58 @@ struct MainView: View {
                 isPinnedSection: true
             )
 
-            ForEach(groups) { group in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 7) {
-                        Image(systemName: group.tagName == nil ? "tag.slash" : "tag")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.secondary)
+            pinnedTagFilterBar
 
-                        Text(group.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text("\(group.items.count)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(minWidth: 18)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(nsColor: .controlBackgroundColor).opacity(0.75))
-                            .clipShape(Capsule())
-                    }
-                    .padding(.top, group.id == groups.first?.id ? 0 : 4)
-
-                    ForEach(group.items) { item in
-                        itemRow(item, isPinnedSection: true)
-                    }
+            if items.isEmpty {
+                Text(pinnedEmptyMessage)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 12)
+            } else {
+                ForEach(items) { item in
+                    itemRow(item, isPinnedSection: true)
                 }
             }
         }
+    }
+
+    private var pinnedTagFilterBar: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                PinnedTagChip(
+                    title: "All",
+                    systemImage: "tray.full",
+                    isSelected: viewModel.selectedPinnedTagName == nil
+                ) {
+                    withAnimation(.easeInOut(duration: 0.14)) {
+                        viewModel.setPinnedTagFilter(nil)
+                    }
+                }
+
+                ForEach(viewModel.availablePinnedTags, id: \.self) { tag in
+                    PinnedTagChip(
+                        title: tag,
+                        systemImage: "tag",
+                        isSelected: viewModel.selectedPinnedTagName == tag
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.14)) {
+                            viewModel.setPinnedTagFilter(tag)
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 1)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var pinnedEmptyMessage: String {
+        if viewModel.selectedPinnedTagName != nil {
+            return viewModel.isSearching ? "No pinned matches in this tag" : "No pinned items in this tag"
+        }
+
+        return "No pinned matches"
     }
 
     private func sectionHeader(
@@ -496,6 +525,42 @@ private struct TagEditorSheet: View {
         }
         .padding(18)
         .frame(width: 420)
+    }
+}
+
+private struct PinnedTagChip: View {
+    let title: String
+    let systemImage: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 10, weight: .semibold))
+
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+        .background(
+            isSelected ?
+                Color.accentColor.opacity(0.14) :
+                Color(nsColor: .controlBackgroundColor).opacity(0.74)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(isSelected ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.12))
+        }
+        .help(title == "All" ? "Show all pinned items" : "Show pinned items tagged \(title)")
     }
 }
 

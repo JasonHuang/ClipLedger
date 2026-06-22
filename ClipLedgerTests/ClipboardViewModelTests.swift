@@ -98,7 +98,7 @@ final class ClipboardViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredHistoryItems.map(\.content), ["Meeting Beta"])
     }
 
-    func testPinnedItemsCanBeTaggedGroupedAndSearchedByTag() throws {
+    func testPinnedItemsCanBeFilteredAndSearchedByTag() throws {
         let viewModel = try makeViewModel()
 
         viewModel.recordClipboardContent("Work URL")
@@ -116,12 +116,25 @@ final class ClipboardViewModelTests: XCTestCase {
         viewModel.pin(plain)
 
         XCTAssertEqual(viewModel.availablePinnedTags, ["Code", "Work"])
-        XCTAssertEqual(viewModel.filteredPinnedTagGroups.map(\.title), ["Code", "Work", "No Tag"])
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Plain Snippet", "Code Snippet", "Work URL"])
+
+        viewModel.setPinnedTagFilter("Work")
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Work URL"])
+
+        viewModel.setPinnedTagFilter("Code")
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Code Snippet"])
+
+        viewModel.setPinnedTagFilter(nil)
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Plain Snippet", "Code Snippet", "Work URL"])
 
         viewModel.searchQuery = "work"
 
         XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Work URL"])
-        XCTAssertEqual(viewModel.filteredPinnedTagGroups.map(\.title), ["Work"])
+        viewModel.setPinnedTagFilter("Code")
+        XCTAssertTrue(viewModel.filteredPinnedItems.isEmpty)
     }
 
     func testUnpinClearsPinnedTag() throws {
@@ -139,6 +152,25 @@ final class ClipboardViewModelTests: XCTestCase {
         XCTAssertEqual(historyItem.content, "Tagged")
         XCTAssertNil(historyItem.normalizedTagName)
         XCTAssertTrue(viewModel.availablePinnedTags.isEmpty)
+    }
+
+    func testPinnedTagFilterResetsWhenTagIsNoLongerAvailable() throws {
+        let viewModel = try makeViewModel()
+
+        viewModel.recordClipboardContent("Tagged")
+        let item = try XCTUnwrap(viewModel.historyItems.first)
+        viewModel.pin(item)
+
+        let pinned = try XCTUnwrap(viewModel.pinnedItems.first)
+        viewModel.setTag("Saved", for: pinned)
+        viewModel.setPinnedTagFilter("Saved")
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Tagged"])
+
+        viewModel.setTag("", for: try XCTUnwrap(viewModel.pinnedItems.first))
+
+        XCTAssertNil(viewModel.selectedPinnedTagName)
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Tagged"])
     }
 
     func testRestoreSelectedItemUsesFilteredSearchResults() throws {

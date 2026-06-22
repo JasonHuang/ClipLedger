@@ -2,19 +2,6 @@ import AppKit
 import Foundation
 import SwiftData
 
-struct PinnedTagGroup: Identifiable {
-    let tagName: String?
-    let items: [ClipboardItem]
-
-    var id: String {
-        tagName ?? "__clipledger_untagged__"
-    }
-
-    var title: String {
-        tagName ?? "No Tag"
-    }
-}
-
 @MainActor
 final class ClipboardViewModel: ObservableObject {
     @Published private(set) var pinnedItems: [ClipboardItem] = []
@@ -22,6 +9,7 @@ final class ClipboardViewModel: ObservableObject {
     @Published var selectedItemID: UUID?
     @Published var errorMessage: String?
     @Published var shortcutWarningMessage: String?
+    @Published private(set) var selectedPinnedTagName: String?
     @Published var searchQuery = "" {
         didSet {
             updateSelectionAfterReload()
@@ -47,11 +35,11 @@ final class ClipboardViewModel: ObservableObject {
     }
 
     var filteredPinnedItems: [ClipboardItem] {
-        filteredItems(from: pinnedItems)
-    }
-
-    var filteredPinnedTagGroups: [PinnedTagGroup] {
-        pinnedTagGroups(from: filteredPinnedItems)
+        let searchFilteredItems = filteredItems(from: pinnedItems)
+        guard let selectedPinnedTagName else { return searchFilteredItems }
+        return searchFilteredItems.filter { item in
+            item.normalizedTagName == selectedPinnedTagName
+        }
     }
 
     var filteredHistoryItems: [ClipboardItem] {
@@ -88,6 +76,7 @@ final class ClipboardViewModel: ObservableObject {
 
             pinnedItems = try modelContext.fetch(pinnedDescriptor)
             historyItems = try modelContext.fetch(historyDescriptor)
+            reconcileSelectedPinnedTag()
             updateLatestRecordedContent()
             updateSelectionAfterReload()
             errorMessage = nil
@@ -154,6 +143,11 @@ final class ClipboardViewModel: ObservableObject {
         item.tagName = normalizedTagName
         saveChanges()
         reload()
+    }
+
+    func setPinnedTagFilter(_ tagName: String?) {
+        selectedPinnedTagName = tagName
+        updateSelectionAfterReload()
     }
 
     func delete(_ item: ClipboardItem) {
@@ -243,29 +237,16 @@ final class ClipboardViewModel: ObservableObject {
         }
     }
 
-    private func pinnedTagGroups(from items: [ClipboardItem]) -> [PinnedTagGroup] {
-        let groupedItems = Dictionary(grouping: items) { item in
-            item.normalizedTagName
-        }
-        let taggedGroups = groupedItems
-            .compactMap { tagName, items -> PinnedTagGroup? in
-                guard let tagName else { return nil }
-                return PinnedTagGroup(tagName: tagName, items: items)
-            }
-            .sorted { lhs, rhs in
-                lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
-            }
-
-        if let untaggedItems = groupedItems[nil], !untaggedItems.isEmpty {
-            return taggedGroups + [PinnedTagGroup(tagName: nil, items: untaggedItems)]
-        }
-
-        return taggedGroups
-    }
-
     private static func normalizedTagName(_ tagName: String) -> String? {
         let trimmed = tagName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func reconcileSelectedPinnedTag() {
+        guard let selectedPinnedTagName else { return }
+        if !availablePinnedTags.contains(selectedPinnedTagName) {
+            self.selectedPinnedTagName = nil
+        }
     }
 
     private func updateLatestRecordedContent() {
