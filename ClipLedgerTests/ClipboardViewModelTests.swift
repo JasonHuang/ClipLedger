@@ -74,6 +74,46 @@ final class ClipboardViewModelTests: XCTestCase {
         XCTAssertEqual(pasteboard.string(forType: .string), "Reusable")
     }
 
+    func testSearchFiltersPinnedAndHistoryItemsCaseInsensitively() throws {
+        let viewModel = try makeViewModel()
+
+        viewModel.recordClipboardContent("Project Alpha")
+        viewModel.recordClipboardContent("Meeting Beta")
+        let alpha = try XCTUnwrap(viewModel.historyItems.first { $0.content == "Project Alpha" })
+        viewModel.pin(alpha)
+
+        viewModel.searchQuery = "alpha"
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Project Alpha"])
+        XCTAssertTrue(viewModel.filteredHistoryItems.isEmpty)
+
+        viewModel.searchQuery = "MEETING"
+
+        XCTAssertTrue(viewModel.filteredPinnedItems.isEmpty)
+        XCTAssertEqual(viewModel.filteredHistoryItems.map(\.content), ["Meeting Beta"])
+
+        viewModel.searchQuery = ""
+
+        XCTAssertEqual(viewModel.filteredPinnedItems.map(\.content), ["Project Alpha"])
+        XCTAssertEqual(viewModel.filteredHistoryItems.map(\.content), ["Meeting Beta"])
+    }
+
+    func testRestoreSelectedItemUsesFilteredSearchResults() throws {
+        let pasteboard = NSPasteboard.withUniqueName()
+        let viewModel = try makeViewModel(pasteboard: pasteboard)
+
+        viewModel.recordClipboardContent("Alpha")
+        viewModel.recordClipboardContent("Beta")
+        viewModel.recordClipboardContent("Gamma")
+
+        viewModel.searchQuery = "beta"
+        viewModel.restoreSelectedItem()
+
+        XCTAssertEqual(pasteboard.string(forType: .string), "Beta")
+        XCTAssertEqual(viewModel.filteredDisplayItems.map(\.content), ["Beta"])
+        XCTAssertEqual(viewModel.filteredDisplayItems.first?.usageCount, 1)
+    }
+
     func testTenThousandHistoryOperationsMaintainLimitAndOrdering() throws {
         let measureOptions = XCTMeasureOptions()
         measureOptions.iterationCount = 1

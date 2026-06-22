@@ -9,6 +9,11 @@ final class ClipboardViewModel: ObservableObject {
     @Published var selectedItemID: UUID?
     @Published var errorMessage: String?
     @Published var shortcutWarningMessage: String?
+    @Published var searchQuery = "" {
+        didSet {
+            updateSelectionAfterReload()
+        }
+    }
 
     var onSystemClipboardWritten: (() -> Void)?
 
@@ -26,6 +31,22 @@ final class ClipboardViewModel: ObservableObject {
 
     var allDisplayItems: [ClipboardItem] {
         pinnedItems + historyItems
+    }
+
+    var filteredPinnedItems: [ClipboardItem] {
+        filteredItems(from: pinnedItems)
+    }
+
+    var filteredHistoryItems: [ClipboardItem] {
+        filteredItems(from: historyItems)
+    }
+
+    var filteredDisplayItems: [ClipboardItem] {
+        filteredPinnedItems + filteredHistoryItems
+    }
+
+    var isSearching: Bool {
+        !normalizedSearchQuery.isEmpty
     }
 
     func reload() {
@@ -142,11 +163,11 @@ final class ClipboardViewModel: ObservableObject {
 
     private var selectedItem: ClipboardItem? {
         guard let selectedItemID else { return nil }
-        return allDisplayItems.first { $0.id == selectedItemID }
+        return filteredDisplayItems.first { $0.id == selectedItemID }
     }
 
     private func moveSelection(offset: Int) {
-        let items = allDisplayItems
+        let items = filteredDisplayItems
         guard !items.isEmpty else {
             selectedItemID = nil
             return
@@ -160,7 +181,7 @@ final class ClipboardViewModel: ObservableObject {
     }
 
     private func updateSelectionAfterReload() {
-        let items = allDisplayItems
+        let items = filteredDisplayItems
         guard !items.isEmpty else {
             selectedItemID = nil
             return
@@ -176,6 +197,19 @@ final class ClipboardViewModel: ObservableObject {
     private func isValidClipboardContent(_ content: String) -> Bool {
         guard content.count <= maximumContentLength else { return false }
         return !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var normalizedSearchQuery: String {
+        searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func filteredItems(from items: [ClipboardItem]) -> [ClipboardItem] {
+        let query = normalizedSearchQuery
+        guard !query.isEmpty else { return items }
+
+        return items.filter { item in
+            item.content.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
     }
 
     private func updateLatestRecordedContent() {

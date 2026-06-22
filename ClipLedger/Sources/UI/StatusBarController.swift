@@ -83,6 +83,7 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
 
         keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.popover.isShown else { return event }
+            guard !self.isTextInputFocused(in: event.window) else { return event }
 
             switch event.keyCode {
             case 126:
@@ -101,6 +102,11 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
                 return event
             }
         }
+    }
+
+    private func isTextInputFocused(in window: NSWindow?) -> Bool {
+        guard let firstResponder = window?.firstResponder else { return false }
+        return firstResponder is NSTextView || firstResponder is NSTextField
     }
 
     private func removeKeyboardMonitor() {

@@ -9,6 +9,8 @@ struct MainView: View {
 
     @State private var isShowingClearConfirmation = false
     @State private var recentlyRestoredItemID: UUID?
+    @State private var isSearchPresented = false
+    @FocusState private var isSearchFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,24 +25,30 @@ struct MainView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
-                    if !viewModel.pinnedItems.isEmpty {
+                    if !viewModel.filteredPinnedItems.isEmpty {
                         itemSection(
                             title: "Pinned",
                             systemImage: "pin.fill",
-                            items: viewModel.pinnedItems,
-                            isPinnedSection: true
+                            items: viewModel.filteredPinnedItems,
+                            isPinnedSection: true,
+                            emptyMessage: nil
                         )
                     }
 
-                    itemSection(
-                        title: "History",
-                        systemImage: "clock.arrow.circlepath",
-                        items: viewModel.historyItems,
-                        isPinnedSection: false
-                    )
+                    if !viewModel.isSearching || !viewModel.filteredHistoryItems.isEmpty {
+                        itemSection(
+                            title: "History",
+                            systemImage: "clock.arrow.circlepath",
+                            items: viewModel.filteredHistoryItems,
+                            isPinnedSection: false,
+                            emptyMessage: "No clipboard text yet"
+                        )
+                    }
 
                     if viewModel.allDisplayItems.isEmpty {
                         EmptyStateView()
+                    } else if viewModel.filteredDisplayItems.isEmpty {
+                        SearchEmptyStateView(query: viewModel.searchQuery)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -61,6 +69,9 @@ struct MainView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .onAppear {
             viewModel.reload()
+            if isSearchPresented {
+                isSearchFocused = true
+            }
         }
         .confirmationDialog(
             "Clear history?",
@@ -101,10 +112,9 @@ struct MainView: View {
                 Spacer()
 
                 ToolbarIconButton(
-                    systemImage: "magnifyingglass",
-                    help: "Search",
-                    isDisabled: true,
-                    action: {}
+                    systemImage: isSearchPresented ? "xmark" : "magnifyingglass",
+                    help: isSearchPresented ? "Close search" : "Search",
+                    action: toggleSearch
                 )
 
                 ToolbarIconButton(
@@ -114,16 +124,21 @@ struct MainView: View {
                 )
             }
 
+            if isSearchPresented {
+                searchBar
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
             HStack(spacing: 8) {
                 StatPill(
                     title: "Pinned",
-                    value: "\(viewModel.pinnedItems.count)",
+                    value: "\(viewModel.filteredPinnedItems.count)",
                     systemImage: "pin.fill"
                 )
 
                 StatPill(
                     title: "History",
-                    value: "\(viewModel.historyItems.count)",
+                    value: "\(viewModel.filteredHistoryItems.count)",
                     systemImage: "clock"
                 )
 
@@ -134,6 +149,39 @@ struct MainView: View {
         .padding(.top, 16)
         .padding(.bottom, 14)
         .background(.regularMaterial)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            TextField("Search clipboard text", text: $viewModel.searchQuery)
+                .textFieldStyle(.plain)
+                .focused($isSearchFocused)
+
+            if !viewModel.searchQuery.isEmpty {
+                Button {
+                    viewModel.searchQuery = ""
+                    isSearchFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Clear search")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.88))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(isSearchFocused ? Color.accentColor.opacity(0.55) : Color.secondary.opacity(0.12))
+        }
     }
 
     private var footer: some View {
@@ -178,7 +226,8 @@ struct MainView: View {
         title: String,
         systemImage: String,
         items: [ClipboardItem],
-        isPinnedSection: Bool
+        isPinnedSection: Bool,
+        emptyMessage: String?
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -202,11 +251,13 @@ struct MainView: View {
             }
 
             if items.isEmpty {
-                Text("No clipboard text yet")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 12)
+                if let emptyMessage {
+                    Text(emptyMessage)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                }
             } else {
                 ForEach(items) { item in
                     HistoryRowView(
@@ -236,6 +287,21 @@ struct MainView: View {
         }
     }
 
+    private func toggleSearch() {
+        withAnimation(.easeInOut(duration: 0.16)) {
+            isSearchPresented.toggle()
+            if !isSearchPresented {
+                viewModel.searchQuery = ""
+            }
+        }
+
+        if isSearchPresented {
+            Task { @MainActor in
+                isSearchFocused = true
+            }
+        }
+    }
+
     private func restore(_ item: ClipboardItem) {
         viewModel.restore(item)
         recentlyRestoredItemID = item.id
@@ -246,6 +312,31 @@ struct MainView: View {
                 recentlyRestoredItemID = nil
             }
         }
+    }
+}
+
+private struct SearchEmptyStateView: View {
+    let query: String
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 54, height: 54)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+            Text("No matches")
+                .font(.callout.weight(.semibold))
+
+            Text(query.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
     }
 }
 
