@@ -14,7 +14,7 @@ final class AppSettings: ObservableObject {
     @Published var launchAtLoginEnabled: Bool {
         didSet {
             defaults.set(launchAtLoginEnabled, forKey: Keys.launchAtLoginEnabled)
-            LaunchAtLoginService.setEnabled(launchAtLoginEnabled)
+            updateLaunchAtLogin(launchAtLoginEnabled)
         }
     }
 
@@ -35,9 +35,14 @@ final class AppSettings: ObservableObject {
     }
 
     private let defaults: UserDefaults
+    private let updateLaunchAtLogin: @MainActor (Bool) -> Void
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        updateLaunchAtLogin: @escaping @MainActor (Bool) -> Void = LaunchAtLoginService.setEnabled
+    ) {
         self.defaults = defaults
+        self.updateLaunchAtLogin = updateLaunchAtLogin
         defaults.register(defaults: [
             Keys.launchAtLoginEnabled: true,
             Keys.maximumHistoryCount: 100,
@@ -50,6 +55,6 @@ final class AppSettings: ObservableObject {
     }
 
     func applyLaunchAtLoginPreference() {
-        LaunchAtLoginService.setEnabled(launchAtLoginEnabled)
+        updateLaunchAtLogin(launchAtLoginEnabled)
     }
 }
