@@ -1,0 +1,51 @@
+name: ClipLedger
+options:
+  bundleIdPrefix: com.codefern
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+targets:
+  ClipLedger:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ClipLedger/Sources
+    resources:
+      - path: ClipLedger/Resources
+        optional: true
+    info:
+      path: ClipLedger/Info.plist
+      properties:
+        CFBundleName: $(PRODUCT_NAME)
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        LSUIElement: true
+        NSHumanReadableCopyright: Copyright (c) 2026 CodeFern. All rights reserved.
+        NSSupportsAutomaticTermination: true
+        NSSupportsSuddenTermination: true
+    entitlements:
+      path: ClipLedger/ClipLedger.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codefern.ClipLedger
+        PRODUCT_NAME: ClipLedger
+        INFOPLIST_FILE: ClipLedger/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  ClipLedgerTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: ClipLedgerTests
+    dependencies:
+      - target: ClipLedger
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codefern.ClipLedgerTests
