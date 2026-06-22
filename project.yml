@@ -35,7 +35,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.codefern.ClipLedger
-        PRODUCT_NAME: ClipLedger
+        PRODUCT_MODULE_NAME: ClipLedger
+        PRODUCT_NAME: ClipLedger Clipboard History
         INFOPLIST_FILE: ClipLedger/Info.plist
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
