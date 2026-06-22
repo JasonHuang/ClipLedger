@@ -11,6 +11,7 @@
 		24EF95A1F1EC385E19B2DE1F /* StatusBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEF8927AE8E01B1AD157D0F0 /* StatusBarController.swift */; };
 		3CD9252009DE3F7C0140687A /* GlobalShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555EB2549C8BDE65A4C89E58 /* GlobalShortcutManager.swift */; };
 		3F568354A55B3558745AD18B /* ClipLedgerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49EB80262F9390AB16ED5B81 /* ClipLedgerApp.swift */; };
+		4AE696389B09574C2C8118A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 51B94D43999F4FC215DAE4D6 /* PrivacyInfo.xcprivacy */; };
 		54C00B09E1B088F9E62872EC /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF625888361623962820472 /* AppSettingsTests.swift */; };
 		64FE6FAF62C70303DAB66918 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE75BE100F90B829371CA45 /* SettingsView.swift */; };
 		89038C319C4B61B8B7076744 /* ClipboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95F85D390EA630BA8F8F276 /* ClipboardViewModel.swift */; };
@@ -21,6 +22,7 @@
 		B65E88A7448F0C04DE28EC87 /* ClipboardViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C15C7D968B785AEA8F93918 /* ClipboardViewModelTests.swift */; };
 		C386EA7B8426EA4B0E7450AC /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CE3CB38ADF4D19012F045A7 /* AppSettings.swift */; };
 		C7449283825E1EF05207BC52 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D4F8E863000A3DB5EDFB10 /* AppDelegate.swift */; };
+		CE043DEEB489A936F073334A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 516D50C85199A41F34C372FF /* Assets.xcassets */; };
 		F92B24851FB29E25D1C18314 /* ClipboardMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF4A62F16CF2208FC6071692 /* ClipboardMonitor.swift */; };
 		FCD1346DA1783BA085183A9D /* HistoryRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46A8A076E41070E40F3CF8F /* HistoryRowView.swift */; };
 /* End PBXBuildFile section */
@@ -42,6 +44,8 @@
 		3D3A2E640717054916FF0B7E /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		3FF625888361623962820472 /* AppSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettingsTests.swift; sourceTree = "<group>"; };
 		49EB80262F9390AB16ED5B81 /* ClipLedgerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipLedgerApp.swift; sourceTree = "<group>"; };
+		516D50C85199A41F34C372FF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		51B94D43999F4FC215DAE4D6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		555EB2549C8BDE65A4C89E58 /* GlobalShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcutManager.swift; sourceTree = "<group>"; };
 		57D4F8E863000A3DB5EDFB10 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		6DA2E742795D17F811D45A71 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
@@ -61,9 +65,20 @@
 			isa = PBXGroup;
 			children = (
 				878419511B14DC02DC8F7C05 /* ClipLedgerTests */,
+				235D7A695B5FA215DF4D09AE /* Resources */,
 				8576D09B2846814235E2B2B9 /* Sources */,
 				C7087EF3E2D31B9E50DE03F9 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		235D7A695B5FA215DF4D09AE /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				516D50C85199A41F34C372FF /* Assets.xcassets */,
+				51B94D43999F4FC215DAE4D6 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Resources;
+			path = ClipLedger/Resources;
 			sourceTree = "<group>";
 		};
 		2F4B18242787257C651A0C6E /* UI */ = {
@@ -154,6 +169,7 @@
 			buildConfigurationList = 5B6677AB940A916516EC6201 /* Build configuration list for PBXNativeTarget "ClipLedger" */;
 			buildPhases = (
 				376BB13976DAD47F745EB2CE /* Sources */,
+				CB13C1692BEDE9213EA4B7B2 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -217,6 +233,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CB13C1692BEDE9213EA4B7B2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE043DEEB489A936F073334A /* Assets.xcassets in Resources */,
+				4AE696389B09574C2C8118A7 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		376BB13976DAD47F745EB2CE /* Sources */ = {

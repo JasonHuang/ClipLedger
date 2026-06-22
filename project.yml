@@ -16,13 +16,13 @@ targets:
     deploymentTarget: "14.0"
     sources:
       - path: ClipLedger/Sources
-    resources:
       - path: ClipLedger/Resources
         optional: true
     info:
       path: ClipLedger/Info.plist
       properties:
         CFBundleName: $(PRODUCT_NAME)
+        LSApplicationCategoryType: public.app-category.productivity
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         LSUIElement: true
         NSHumanReadableCopyright: Copyright (c) 2026 CodeFern. All rights reserved.
@@ -30,6 +30,8 @@ targets:
         NSSupportsSuddenTermination: true
     entitlements:
       path: ClipLedger/ClipLedger.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.codefern.ClipLedger
