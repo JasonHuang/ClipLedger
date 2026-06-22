@@ -14,6 +14,13 @@ struct MainView: View {
         VStack(spacing: 0) {
             header
 
+            if let shortcutWarningMessage = viewModel.shortcutWarningMessage {
+                WarningBanner(message: shortcutWarningMessage)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .background(Color(nsColor: .textBackgroundColor).opacity(0.42))
+            }
+
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 20) {
                     if !viewModel.pinnedItems.isEmpty {
@@ -309,5 +316,28 @@ private struct ErrorBanner: View {
         .padding(10)
         .background(Color.red.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct WarningBanner: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "keyboard.badge.exclamationmark")
+                .foregroundStyle(.orange)
+
+            Text(message)
+                .lineLimit(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.caption)
+        .padding(10)
+        .background(Color.orange.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color.orange.opacity(0.18))
+        }
     }
 }

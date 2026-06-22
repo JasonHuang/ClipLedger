@@ -1,6 +1,20 @@
 import Carbon
 import Foundation
 
+enum GlobalShortcutRegistrationError: LocalizedError {
+    case eventHandler(OSStatus)
+    case hotKey(OSStatus)
+
+    var errorDescription: String? {
+        switch self {
+        case .eventHandler(let status):
+            return "Keyboard shortcut support could not start. You can still open ClipLedger from the menu bar. (OSStatus \(status))"
+        case .hotKey(let status):
+            return "Control + Shift + V is unavailable, likely because another app is using it. You can still open ClipLedger from the menu bar. (OSStatus \(status))"
+        }
+    }
+}
+
 final class GlobalShortcutManager {
     private let onTrigger: () -> Void
     private var hotKeyRef: EventHotKeyRef?
@@ -10,7 +24,8 @@ final class GlobalShortcutManager {
         self.onTrigger = onTrigger
     }
 
-    func register() {
+    @discardableResult
+    func register() -> Result<Void, GlobalShortcutRegistrationError> {
         unregister()
 
         var eventType = EventTypeSpec(
@@ -37,10 +52,10 @@ final class GlobalShortcutManager {
 
         guard handlerStatus == noErr else {
             NSLog("ClipLedger global shortcut handler registration failed: \(handlerStatus)")
-            return
+            return .failure(.eventHandler(handlerStatus))
         }
 
-        var hotKeyID = EventHotKeyID(signature: "CLDG".fourCharCode, id: 1)
+        let hotKeyID = EventHotKeyID(signature: "CLDG".fourCharCode, id: 1)
         let modifiers = UInt32(controlKey | shiftKey)
         let hotKeyStatus = RegisterEventHotKey(
             UInt32(kVK_ANSI_V),
@@ -53,7 +68,11 @@ final class GlobalShortcutManager {
 
         if hotKeyStatus != noErr {
             NSLog("ClipLedger global shortcut registration failed: \(hotKeyStatus)")
+            unregister()
+            return .failure(.hotKey(hotKeyStatus))
         }
+
+        return .success(())
     }
 
     func unregister() {

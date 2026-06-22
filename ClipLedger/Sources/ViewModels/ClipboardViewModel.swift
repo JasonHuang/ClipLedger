@@ -8,6 +8,7 @@ final class ClipboardViewModel: ObservableObject {
     @Published private(set) var historyItems: [ClipboardItem] = []
     @Published var selectedItemID: UUID?
     @Published var errorMessage: String?
+    @Published var shortcutWarningMessage: String?
 
     var onSystemClipboardWritten: (() -> Void)?
 

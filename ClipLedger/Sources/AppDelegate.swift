@@ -51,7 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             mainViewModel.reload()
             monitor.start()
-            shortcutManager.register()
+            switch shortcutManager.register() {
+            case .success:
+                mainViewModel.shortcutWarningMessage = nil
+            case .failure(let error):
+                mainViewModel.shortcutWarningMessage = error.localizedDescription
+            }
             appSettings.applyLaunchAtLoginPreference()
         } catch {
             presentStartupError(error)
