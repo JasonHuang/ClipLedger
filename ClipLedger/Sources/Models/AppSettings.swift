@@ -4,6 +4,7 @@ import Foundation
 final class AppSettings: ObservableObject {
     enum Keys {
         static let launchAtLoginEnabled = "launchAtLoginEnabled"
+        static let launchAtLoginUserConsented = "launchAtLoginUserConsented"
         static let maximumHistoryCount = "maximumHistoryCount"
         static let removeConsecutiveDuplicates = "removeConsecutiveDuplicates"
     }
@@ -14,6 +15,7 @@ final class AppSettings: ObservableObject {
     @Published var launchAtLoginEnabled: Bool {
         didSet {
             defaults.set(launchAtLoginEnabled, forKey: Keys.launchAtLoginEnabled)
+            defaults.set(true, forKey: Keys.launchAtLoginUserConsented)
             updateLaunchAtLogin(launchAtLoginEnabled)
         }
     }
@@ -44,17 +46,28 @@ final class AppSettings: ObservableObject {
         self.defaults = defaults
         self.updateLaunchAtLogin = updateLaunchAtLogin
         defaults.register(defaults: [
-            Keys.launchAtLoginEnabled: true,
+            Keys.launchAtLoginEnabled: false,
             Keys.maximumHistoryCount: 100,
             Keys.removeConsecutiveDuplicates: true
         ])
 
-        self.launchAtLoginEnabled = defaults.object(forKey: Keys.launchAtLoginEnabled) as? Bool ?? true
+        Self.migrateLaunchAtLoginConsent(defaults: defaults)
+
+        self.launchAtLoginEnabled = defaults.object(forKey: Keys.launchAtLoginEnabled) as? Bool ?? false
         self.maximumHistoryCount = defaults.object(forKey: Keys.maximumHistoryCount) as? Int ?? 100
         self.removeConsecutiveDuplicates = defaults.object(forKey: Keys.removeConsecutiveDuplicates) as? Bool ?? true
     }
 
     func applyLaunchAtLoginPreference() {
         updateLaunchAtLogin(launchAtLoginEnabled)
+    }
+
+    private static func migrateLaunchAtLoginConsent(defaults: UserDefaults) {
+        let hasLaunchAtLoginPreference = defaults.object(forKey: Keys.launchAtLoginEnabled) != nil
+        let userConsented = defaults.bool(forKey: Keys.launchAtLoginUserConsented)
+
+        if hasLaunchAtLoginPreference, defaults.bool(forKey: Keys.launchAtLoginEnabled), !userConsented {
+            defaults.set(false, forKey: Keys.launchAtLoginEnabled)
+        }
     }
 }

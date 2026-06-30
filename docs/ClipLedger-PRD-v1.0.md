@@ -361,7 +361,7 @@ Launch At Login
 
 Default:
 
-Enabled
+Disabled
 
 ---
 
